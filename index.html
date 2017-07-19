@@ -1,0 +1,1881 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+
+<title>Oreilly Reactive Architecture</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="css/reveal.min.css">
+<link rel="stylesheet" href="css/theme/lightbend-training.css" id="theme">
+<link rel="stylesheet" href="lib/css/idea.css">
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+  if( window.location.search.match( /print-pdf/gi ) ) {
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = 'css/print/pdf.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  }
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+</head>
+
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+
+<!-- ########################################################################################### -->
+<!-- BEGIN
+<!-- ########################################################################################### -->
+
+<!-- trainivator-slide-begin -->
+<section id="fast-track-to-akka" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Oreilly Reactive Architecture
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="agenda" class="content" data-markdown><script type="text/template">
+## Agenda
+
+- [Overview](#/overview) <!-- .element: class="agendaItem" -->
+- [Actor Basics](#/actor-basics) <!-- .element: class="agendaItem" -->
+- [Testing Actors](#/testing-actors) <!-- .element: class="agendaItem" -->
+- [Actor Lifecycle](#/actor-lifecycle) <!-- .element: class="agendaItem" -->
+- [Fault Tolerance](#/fault-tolerance) <!-- .element: class="agendaItem" -->
+- [Routers and Dispatchers](#/routers-and-dispatchers) <!-- .element: class="agendaItem" -->
+- [Wrapping up](#/wrapping-up) <!-- .element: class="agendaItem" -->
+</script></section>
+
+
+<!-- ########################################################################################### -->
+<!-- Overview
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="overview" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Overview
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="what-is-akka" class="content" data-markdown><script type="text/template">
+## What is Akka?
+
+<blockquote>Akka is a toolkit and runtime for building highly concurrent, distributed, and fault tolerant event-driven applications on the JVM.</blockquote>
+<small>[akka.io](http://akka.io)</small>
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="akka-is-reactive" class="content" data-markdown><script type="text/template">
+## Akka is Reactive
+
+![Reactive](images/reactive.png "Reactive")
+
+- Responsive: System responds in a timely manner
+- Resilient: System stays responsive in the face of failure
+- Elastic: System stays responsive under varying workload
+- Message Driven: System foundation for elastic, resilient responsiveness
+
+<small class="footnote">For more information see the [Reactive Manifesto](http://www.reactivemanifesto.org/)</small>
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="akka-values" class="content" data-markdown data-state="imgNoBorder"><script type="text/template">
+## Akka&#39;s Value Proposition
+
+A single **unified** programming model for
+
+- simpler concurrency
+- simpler distribution
+- simpler fault tolerance
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="simpler-concurrency" class="content" data-markdown><script type="text/template">
+## Simpler Concurrency
+
+![Concurrency](images/concurrency.jpg "Concurrency")
+
+- Actors let us write code in a **single-threaded illusion**
+- No locks, *synchronized* or other primitives needed
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="simpler-distribution" class="content" data-markdown><script type="text/template">
+## Simpler Distribution
+
+![Distribution](images/distribution.jpg "Distribution")
+
+- Everything in Akka is **distributed by default**
+- Akka goes from remote to local by optimization
+
+Note:
+- Optimization example: Messages are not serialized in a local environment
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="simpler-fault-tolerance" class="content" data-markdown><script type="text/template">
+## Simpler Fault Tolerance
+
+![Resilience](images/resilience.jpg "Resilience")
+
+Akka **decouples** communication from failure handling:
+
+- Supervisors handle failure
+- Callers need not care (they can&#39;t anyway)
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="case-study" class="content" data-markdown><script type="text/template">
+## Case Study: Coffee House
+
+![coffee-house](images/coffee-house.jpg "coffee-house")
+
+- We are going to build the **Coffee House** bar:
+  - Coffees like Akkaccino, MochaPlay and CaffeJava
+  - Guests can get caffeinated, waiters can get frustrated
+  - Baristas can become bottlenecks
+- Mission: Keep Coffee House healthy!
+</script></section>
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-prepared-code" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Group Exercise
+### Look at the prepared code
+
+- To focus on the essentials code has been prepared
+- Let&apos;s take a look at it together!
+</script></section>
+
+</section>  <!-- trainivator-hide -->
+
+
+
+<!-- ########################################################################################### -->
+<!-- Actor Basics
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="actor-basics" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Actor Basics
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-model" class="content" data-markdown><script type="text/template">
+## The Actor Model
+
+<blockquote>The actor is the fundamental unit of computation embodying processing, storage and communication.</blockquote>
+<small>Carl Hewitt</small>
+
+- Invented 1973 by Carl Hewitt
+- Akka:
+  - Processing &#x2192; behavior
+  - Storage &#x2192; state
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-model-concept" class="content" data-markdown><script type="text/template">
+## Fundamental Concepts of the Actor Model
+
+- Everything is an actor
+- Each actor has an address
+- When an actor handles a message, it can
+  - create new actors
+  - send messages to other actors
+  - change the behavior for handling the next message
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="anatomy-actor-1" class="content" data-markdown><script type="text/template">
+## Anatomy of an Actor I
+
+![Actor](images/actor-01.png "Actor")
+
+- Each actor is represented by an *ActorRef*
+- You never get access to an *Actor* instance
+- An actor reference lets you send messages to the actor
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="anatomy-actor-2" class="content" data-markdown><script type="text/template">
+## Anatomy of an Actor II
+
+![Actor](images/actor-02.png "Actor")
+
+- Each actor has a mailbox and a dispatcher
+- The dispatcher enqueues incoming messages in the mailbox
+- After that, the dispatcher schedules message processing
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="anatomy-actor-3" class="content" data-markdown><script type="text/template">
+## Anatomy of an Actor III
+
+![Actor](images/actor-03.png "Actor")
+
+- Only one message at a time is passed to the actor
+- Message processing happens in a "single-threaded illusion"
+- **Important**: Message delivery and processing are separate activities and most probably happen in different threads
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actors-mutability" class="content" data-markdown><script type="text/template">
+## Actors and Mutability
+
+- Actors may have mutable state:
+  - Akka takes care of memory consistency
+  - **Attention**: Don&#39;t share mutable state!
+- Actors exclusively communicate with message passing:
+  - **Attention**: Messages must be immutable!
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-systems-1" class="content" data-markdown><script type="text/template">
+## Actor Systems I
+
+<blockquote>One actor is no actor, they come in systems.</blockquote>
+<small>Carl Hewitt</small>
+
+- An actor system is a collaborating ensemble of actors
+- Actors are arranged in a hierarchy:
+  - Actors can split up and delegate tasks to child actors
+  - Child actors are supervised and delegate their failure back to their parent
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-systems-2" class="content" data-markdown><script type="text/template">
+## Actor Systems II
+
+- *ActorSystem*s provide shared facilities:
+  - Factory for top-level actors: *actorOf*
+  - Dispatchers and thread pools: heavyweight
+  - Scheduling service: *scheduler*
+  - Access to configuration: *settings.config*
+  - Publish-subscribe *eventStream*, used internally for logging, unhandled messages and dead letters, but open for user code
+- There can be multiple actor systems per JVM or even per classloader, because Akka doesn&#39;t use any global state
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="anatomy-actor-systems" class="content" data-markdown><script type="text/template">
+## Anatomy of an Actor System
+
+![Actor system](images/actor-system.png "Actor system")
+
+- Within an actor system actors are arranged in a hierarchy
+- Therefore each actor has a parent:
+  - Top-level actors are children of the guardian
+  - Each actor can create child actors
+- Each actor has a name which is unique amongst its siblings
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="implementing-actor" class="content" data-markdown><script type="text/template">
+## Implementing an Actor
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+    public CoffeeHouse() {
+        log().debug("{} has opened!", "Coffee House")
+        log().error(exception, "Bar closed!")
+
+        // TODO Define behavior
+    }
+}
+```
+
+- To implement an actor extend with *AbstractActor* class
+- To use Akka&#39;s logging facility extend with *AbstractLoggingActor* class
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="initial-behavior" class="content" data-markdown><script type="text/template">
+## Initial Behavior
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+  public CoffeeHouse() {
+  }
+
+  @Override
+  public Receive createReceive() {
+      return receiveBuilder()
+          .matchAny(o -> log().info("Coffee Brewing"))
+          .build();
+  }
+
+}
+```
+- Behavior is simply a *PartialFunction&lt;Object, BoxedUnit&gt;*:
+  - An actor can but need not handle any message
+- receiveBuilder() is used for building the partial function.
+- The *receive* method takes in the actor&#39;s initial behavior:
+  - The behavior can be changed at runtime (more to come later)
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="unhandled-messages" class="content" data-markdown><script type="text/template">
+## Unhandled Messages
+
+``` java
+receiveBuilder()
+    .match(CreateGuest.class, createGuest -> 
+        createGuest(createGuest.favoriteCoffee))
+    .matchAny(this::unhandled).build();
+```
+
+- What happens if a message isn&#39;t handled by the behavior?
+- By default
+  - an *UnhandledMessage* event is published to the event stream
+  - or a *DeathPactException* is thrown for an unhandled *Terminated* message (more to come later)
+- This could be customized by overriding the *unhandled* method
+- In order to log unhandled messages, set the configuration setting *akka.actor.debug.unhandled* to *on*
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-implement-actor" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 1 > Implement Actor
+
+- In this exercise, we create the *CoffeeHouse* actor with logging:
+    - Start an *sbt* session.
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > implement-actor >
+    ```
+    - use the *man e* command to see the instructions.
+
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="creating-actor-system" class="content" data-markdown><script type="text/template">
+## Creating an Actor System
+
+``` java
+final ActorSystem system = ActorSystem.create("my-system");
+...
+system.terminate()
+```
+
+- To create an actor system call the *ActorSystem* factory method
+- **Attention**: As an actor system is heavyweight, don&#39;t forget to *terminate* the actor system "at the end"!
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="creating-actor" class="content" data-markdown><script type="text/template">
+## Creating an Actor
+
+``` java
+ system.actorOf(CoffeeHouse.props(), "coffee-house");
+```
+
+- To create an actor&#39;s you need *Props*:
+  - *Props* configure an actor, most notably its class
+  - To create *Props* use one of its factory methods
+- To create an actor call the *actorOf* method of an *ActorRefFactory*:
+  - This prevents you from accessing an actor directly
+  - The optional name must not be empty or start with *'$'*
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="props-factories" class="content" data-markdown><script type="text/template">
+## Props Factories
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+  public static Props props(){
+      return Props.create(CoffeeHouse.class, CoffeeHouse::new);
+  }
+...
+```
+
+- You could create *Props* in place when needed.
+- For remoting *Props* need to be serializable.
+- **Best practice**: Define *props* as a static factory method inside the corresponding actor.
+</script></section>
+
+
+<section id="creating-top-level-actor" class="content" data-markdown><script type="text/template">
+## Creating a Top-Level Actor
+
+``` java
+ActorRef coffeeHouse = createCoffeeHouse();
+
+protected ActorRef createCoffeeHouse(){
+    return system.actorOf(CoffeeHouse.props(), "coffee-house");
+}
+```
+
+- To create a top-level actor call *ActorSystem.actorOf*
+- If you give a name, it has to be unique amongst its siblings
+- If you create an anonymous actor, Akka synthesizes a name
+- Creating an actor is an asynchronous operation
+- **Best practice**: Use dedicated factory methods for creating top-level actors to facilitate testing
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="configuration" class="content" data-markdown><script type="text/template">
+## Digression: Configuration
+
+``` json
+akka {
+  actor {
+    debug {
+      lifecycle = on
+      unhandled = on
+    }
+  }
+}
+```
+
+- Akka uses the [Typesafe Config Library](https://github.com/typesafehub/config)
+- By default Akka looks for *application.conf* on the classpath
+- For more details see the [Akka documentation](http://doc.akka.io/docs/akka/current/general/configuration.html)
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="logging-configuration" class="content" data-markdown><script type="text/template">
+## Digression: Logging Configuration
+
+``` json
+akka {
+  loggers = [akka.event.slf4j.Slf4jLogger]
+  loglevel = debug
+  logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
+}
+```
+
+- For real-world scenarios use the *Slf4jLogger*
+- The Akka logging level is defined with *loglevel*
+- The coffee-house project is already ready for logging:
+  - Library dependencies on akka-slf4j and [Logback](http://logback.qos.ch)
+  - *logback.xml* configuration file
+  - **Attention**: You have to use *tail -f coffee-house.log* to watch the log output!
+
+Note:
+- the logging-filter is new in 2.4 and filters event based on slf4j before putting them on event bus
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-top-level-actor" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+
+## Exercise 2 > Top Level Actor
+
+- In this exercise, we will make *CoffeeHouse* a top-level actor and implement some configuration properties.
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > top-level-actor >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="communication" class="content" data-markdown><script type="text/template">
+## Communication
+
+``` java
+ActorRef coffeeHouse = ...
+...
+this.coffeeHouse.tell("Nice Coffee!", self());
+```
+
+- To send a message to an actor, you need an actor reference
+- Call its *tell* method with any message and actor reference of the sender
+- Execution continues without waiting for a response in **fire-and-forget** manner
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="messages" class="content" data-markdown><script type="text/template">
+## Messages
+
+``` java
+public class Guest extends AbstractLoggingActor{
+...
+    public static final class CoffeeFinished{
+
+        public static final CoffeeFinished Instance =
+            new CoffeeFinished();
+
+        private CoffeeFinished(){
+        }
+    }
+...
+}
+```
+
+- **Attention**: Messages must be immutable!
+- **Best practice**:
+  - Use final static classes
+  - You **must override** equals, hashCode and toString if your message takes parameters
+  - Define the **message protocol** in the actor
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-message-actor" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+
+## Exercise 3 > Message Actor
+
+- In this exercise, we will send a message to our *CoffeeHouse*
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > message-actor >
+    ```
+    - use the *man e* command to see the instructions.
+
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="including-the-sender" class="content" data-markdown><script type="text/template">
+## Including the Sender
+
+``` java
+final def tell(msg : scala.Any,
+  sender : akka.actor.ActorRef) : scala.Unit = {
+...
+```
+
+- You always have to send the ActorRef of the sender.
+- If no sender is available use ```Actor.noSender()```
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="using-the-sender" class="content" data-markdown><script type="text/template">
+## Using the Sender
+
+``` java
+public class Waiter extends AbstractLoggingActor{
+
+    public Waiter(){
+    }
+
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+            .match(ServeCoffee.class, serveCoffee -> sender()
+                .tell(new CoffeeServed(serveCoffee.coffee), 
+                    self()))
+            .matchAny(this::unhandled).build();
+    }
+...
+````
+
+- *sender* gives you access to the sender of the current message
+- Quiz: Why might the sender be *ActorSystem.deadLetters*?
+- **Attention**: *sender* is a method, don&#39;t let it leak!
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-use-sender" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+
+## Exercise 4 > Use Sender
+
+- In this exercise, we will use the sender to respond from *CoffeeHouse*
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > use-sender >
+    ```
+    - use the *man e* command to see the instructions.
+
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+<section id="actor-context" class="content" data-markdown><script type="text/template">
+## Actor Context
+
+``` java
+abstract class AbstractActor()
+  extends scala.AnyRef
+  with akka.actor.Actor {
+
+  def getContext() : akka.actor.AbstractActorContext = {
+  ...
+}
+```
+
+- Each actor has an *ActorContext*
+- This provides contextual information and operations:
+  - Access to *self* and the current *sender*
+  - Access to  *parent* and *children*
+  - Create child actors and *stop* actors
+  - Death watch, change behavior, etc. (more to come later)
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="forwarding-messages" class="content" data-markdown><script type="text/template">
+## Forwarding Messages
+
+``` scala
+abstract class ActorRef {
+  def forward(message: Any)(implicit context: ActorContext) = ...
+  ...
+}
+```
+
+- *forward* sends a message passing along the sender from the actor context
+- This way you can make an actor you are sending a message to respond to the actor you received the current message from
+
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="creating-child-actor" class="content" data-markdown><script type="text/template">
+## Creating a Child Actor
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+  ActorRef guest = createGuest()
+
+  protected ActorRef createGuest(Coffee favoriteCoffee,
+    int caffeineLimit){
+
+    return context().actorOf(
+      Guest.props(waiter, favoriteCoffee,
+        guestFinishCoffeeDuration, caffeineLimit));
+  }
+}
+```
+
+- To create a child actor call *ActorContext.actorOf*
+- Like for top-level actors you get back an *ActorRef*
+- **Best practice**: Use dedicated factory methods for creating child actors to facilitate testing
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-child-actors" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+
+## Exercise 5 > Child Actors
+
+- In this exercise, we will use *CoffeeHouse* to create *Guest* as a child actor
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > child-actors >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="looking-up-actors" class="content" data-markdown><script type="text/template">
+## Looking up Actors
+
+``` java
+context().actorSelection("/user/coffee-house");
+context().actorSelection("../sibling");
+context().actorSelection("/user/coffee-house/*");
+```
+
+- To look up actors use the *actorSelection* method of an *ActorRefFactory*
+- You can use absolute or relative paths or even wildcards
+- The *ActorSelection* you get back
+  - is a logical view of a section of the actor tree
+  - is unverified, i.e. messages might end up in *deadLetters*
+  - is less performant when it comes to messaging, because the actor hierarchy has to be traversed
+  - can&#39;t be used for death watch
+- **Attention**: Don&#39;t overuse actor lookup!
+</script></section>
+
+
+<!-- ############################################################################################################### -->
+
+
+<section id="identifying-actors" class="content" data-markdown><script type="text/template">
+## Identifying Actors
+
+``` java
+ActorSelection sibling = context().actorSelection("../sibling");
+sibling.tell(Identify(1), self());
+```
+
+- To obtain an actor reference send *Identify* to an *ActorSelection*
+- For a successful lookup the *ActorIdentity* response contains an *ActorRef*
+- *Identify* is treated specially: If the lookup fails, you still get a response
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-state" class="content" data-markdown><script type="text/template">
+## Actor State
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+    public CoffeeHouse(int caffeineLimit){
+    ...
+    }
+
+system.actorOf(
+  Props.create(CoffeeHouse.class, () -> new CoffeeHouse(0)));
+```
+
+- Actors can have both mutable and immutable state
+- Parameters are a typical example for immutable state
+- To create an actor with parameters you have to use the *Props* factory method that takes Java 8 stye functional interface called *Creator*.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="mutable-actor-state" class="content" data-markdown><script type="text/template">
+## Mutable Actor State
+
+``` java
+public class CoffeeHouse extends AbstractLoggingActor{
+
+    private int caffieneLimit;
+
+    public CoffeeHouse(int caffeineLimit){
+      this.caffeineLimit = caffeineLimit;
+    ...
+    }
+    ...
+}
+```
+
+- Mutable actor state can be used in a single-threaded illusion
+- Akka takes care of all concurrency related aspects
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-actor-state-1" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 6 > Actor State
+
+![Message flow](images/coffee-house-01.png "Message flow")
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+<section id="ex-actor-state-2" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 6 > Actor State
+
+- In this exercise, we implement state by tracking a *Guest* actors favorite *Coffee*
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > actor-state >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+<section id="scheduler-service" class="content" data-markdown><script type="text/template">
+## Scheduler Service
+
+``` java
+import akka.actor.AbstractLoggingActor;
+import scala.concurrent.duration.FiniteDuration;
+
+private void scheduleCoffeeFinished(){
+  context().system()
+  .scheduler()
+  .scheduleOnce(finishCoffeeDuration, self(),
+      CoffeeFinished.Instance, context().dispatcher(), self());
+}
+```
+
+- The actor system offers a *scheduler*:
+  - You can run a task or send a message to an actor
+  - This can be scheduled once or periodically
+- You need to pass an *ExecutionContext*, e.g. an actor&#39;s *dispatcher*
+- In the the configuration file, you can use expressions like "5 seconds", "2m" for durations
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-use-scheduler-1" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 7 > Use Scheduler
+
+![Message flow](images/coffee-house-02.png "Message flow")
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-use-scheduler-2" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 7 > Use Scheduler
+
+- In this exercise, we implement the Akka *Scheduler* to simulate the *Guest* ordering more *Coffee*
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > use-scheduler >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+</section> <!-- trainivator-hide -->
+
+
+<!-- ########################################################################################### -->
+<!-- Testing Actors
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="testing-actors" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Testing Actors
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="testing-actors-different" class="content" data-markdown><script type="text/template">
+## Testing Actors is different
+
+- Two properties of the actor model complicate testing:
+  - Actors can only be accessed through their actor reference
+  - Multi-threaded messaging is non-deterministic
+- Akka provides the *akka-testkit* module addressing both issues
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="akka-testing-styles" class="content" data-markdown><script type="text/template">
+## Akka Testing Styles
+
+- Unit testing:
+  - Isolated pieces of code
+  - Bypassing the actor model
+  - Single-threading scheduling
+  - Deterministic messaging
+- Integration testing:
+  - Actor interactions
+  - Multi-threaded scheduling
+  - Non-deterministic messaging
+</script></section>
+
+<!-- ########################################################################################### -->
+
+
+<section id="sync-unit-testing" class="content" data-markdown><script type="text/template">
+## Synchronous Unit Testing
+
+``` java
+
+final Props props = Props.create(Counter.class, Counter::new);
+final TestActorRef<Counter> counter =
+  TestActorRef.create(system, props);
+counter.tell(new Increment(1), ...);
+Counter counterActor = counter.underlyingActor();
+assertEquals(1, counterActor.count);
+```
+
+- *TestActorRef* enables white-box testing of individual actors:
+  - Get a reference to the underlying actor
+  - Directly invoke the actor&#39;s initial behavior
+- In addition you get synchronous messaging
+- **Attention**: Don&#39;t overuse *TestActorRef*!
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="async-unit-testing" class="content" data-markdown><script type="text/template">
+## Asynchronous Integration Testing
+
+``` java
+@Test
+public void testIt() {
+  new JavaTestKit(system) {{
+    ActorRef ping = getRef();
+    ActorRef pong = system.actorOf(
+      Props.create(Pong.class, () -> new Pong(ping)));
+    pong.tell(Ping, ActorRef.noSender());
+    expectMsgClass(Pong.class);
+  }};
+}
+```
+
+- JavaTestKit class contains a collection of tools for async testing
+- *getRef* can be used to mock actor refs.
+- Inspect message flows using one of many [built-in assertions](http://doc.akka.io/docs/akka/current/scala/testing.html#Built-In_Assertions), e.g.:
+  - *expectMsg*
+  - *expectNoMsg*
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-test-kit" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Group exercise > JavaTestKit
+
+- Let&#39;s take a look at the *GuestTest* class
+- See how *expectMsg* and *within* are used to inspect the message flow between *Guest* and *Waiter*
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-busy-actor-1" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 8 > Busy Actor
+
+![Message flow](images/coffee-house-03.png "Message flow")
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-busy-actor-2" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 8 > Busy Actor
+
+- In this exercise, we introduce a *Barista* actor who specializes in making our fine caffeinated beverages and will keep our other actors busy
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > busy-actor >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+</section> <!-- trainivator-hide -->
+
+
+<!-- ########################################################################################### -->
+<!-- Actor Lifecycle
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="actor-lifecycle" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Actor Lifecycle
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="starting-actors" class="content" data-markdown><script type="text/template">
+## Starting Actors
+
+![Actor lifecycle](images/actor-lifecycle-01.png "Actor lifecycle")
+
+- Creating an actor automatically starts it
+- A started actor is fully operable, i.e. it can handle messages
+- You can override the *preStart* hook
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="stopping-actors" class="content" data-markdown><script type="text/template">
+## Stopping Actors
+
+![Actor lifecycle](images/actor-lifecycle-02.png "Actor lifecycle")
+
+- An actor can stop itself or be stopped by another one
+- A stopped actor is no longer operable, i.e. it won&#39;t process any messages
+- You can override the *postStop* hook, after which the actor is considered terminated and becomes available for garbage collection
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="stopping-actors-api" class="content" data-markdown><script type="text/template">
+## Stopping Actors with the API
+
+``` java
+context().stop(self);
+context().stop(other);
+```
+
+- Both *ActorSystem* and *ActorContext* provide a *stop* method
+- Stopping an actor is an asynchronous and recursive operation:
+  - The actor finishes processing the current message, if any,
+  - suspends message processing,
+  - stops its children,
+  - waits for their termination confirmations and then terminates itself.
+- Stopping an actor inevitably stops all its descendants
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-stop-actor-1" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+
+## Exercise 9 > Stop Actor
+
+![Message flow](images/coffee-house-04.png "Message flow")
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-stop-actor-2" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 9 > Stop Actor
+
+- In this exercise we limit the number of coffees a *Guest* consumes by setting a caffeine limit per *Guest*. When the *Guest* reaches their limit, we will stop the actor
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > stop-actor >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="stop-actor-gracefully" class="content" data-markdown><script type="text/template">
+## Stopping Actors gracefully
+
+``` java
+other.tell(StopMeGracefully, self());
+```
+
+- If an actor needs to perform certain tasks before stopping, it
+  - should advertise a dedicated message for that purpose,
+  - handle it as appropriate and
+  - stop itself thereafter
+- The *PoisonPill* offered by Akka is deprecated and will be removed:
+  - It is too simplistic
+  - The sender needs intimate knowledge of the recipient&#39;s inner workings in order to determine whether *PoisonPill* will have the intended effect
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="lifecycle-monitoring" class="content" data-markdown><script type="text/template">
+## Lifecycle Monitoring
+
+``` java
+receiveBuilder().
+  match(CreateGuest.class, m -> {
+      final ActorRef guest = createGuest(m.favoriteCoffee,
+          createGuest.caffeineLimit);
+      addGuestToBookkeeper(guest);
+      context().watch(guest);
+  }).
+  match(Terminated.class, terminated -> {
+      log().info("Thanks, {}, for being our guest!",
+          terminated.getActor());
+      removeGuestFromBookkeeper(terminated.getActor());
+  }).
+  matchAny(this::unhandled).build();
+```
+
+- An actor can monitor another actor&#39;s termination, aka death watch
+- Quiz: Why is there no birth watch?
+- On termination the monitoring actor is sent a *Terminated* message
+- If *Terminated* is not handled, a *DeathPactException* is thrown by default
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-lifecycle-monitoring" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 10 > Lifecycle Monitoring
+
+- Sometimes we need to perform certain tasks before stopping an actor. In this exercise, we explore this idea by watching for the *Termination* message
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > lifecycle-monitoring >
+    ```
+    - use the *man e* command to see the instructions.
+
+</script></section>
+
+
+</section> <!-- trainivator-hide -->
+
+
+<!-- ########################################################################################### -->
+<!-- Fault Tolerance
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="fault-tolerance" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Fault Tolerance
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-systems-revisited" class="content" data-markdown><script type="text/template">
+## Actor Systems revisited
+
+![Actor system](images/actor-system.png "Actor system")
+
+- Within an actor system actors are arranged in a hierarchy
+- Therefore each actor has a parent
+- Each actor has a name which is unique amongst its siblings
+- Therefore each actor can be identified by a unique sequence of names
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-path" class="content" data-markdown><script type="text/template">
+## Actor Path
+
+``` json
+akka://my-system/user/ParentA/ChildA
+akka.tcp://my-system@host.domain.com:5678/user/ParentA/ChildA
+
+ActorPath path = coffeeHouse.path(); // akka://coffee-house-system/user/coffee-house
+
+path.name() // coffee-house
+```
+
+- An *ActorPath* encapsulates
+  - the sequence of actor names together with
+  - the transport protocol and
+  - the address of the actor system
+- To obtain an actor path call *path* on *ActorRef*
+- To get an actor&#39;s name call *name* on *ActorPath*
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="embrace-failure" class="content" data-markdown><script type="text/template">
+## Embrace Failure
+
+![S..t happens!](images/failure.jpg "S..t happens!")
+
+- Errors are a fact of life
+- Don&#39;t worry, just [let it crash](http://letitcrash.com)
+- Instead of trying to prevent failure simply handle it properly
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="failure-in-akka" class="content" data-markdown><script type="text/template">
+## Failure in Akka
+
+- Akka deals with failure at the level of individual actors
+- An actor fails when it throws an exception (*NonFatal* throwable)
+- Failure can occur
+  - during message processing
+  - during initialization
+  - within a lifecycle hook, e.g. *preStart*
+- How should such failure be handled?
+- Let&#39;s see what happens by default ...
+
+Note:
+  - NonFatal is by Scala's definition: Non-Fatal throwables. Examples of *fatal* errors:
+    - `VirtualMachineError` such as `OutOfMemoryError` and `StackOverflowError`
+    - some others include `ThreadDeath`, and `InterruptedException`
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-faulty-guest" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 11 > Faulty Guest
+
+- In this exercise, we will explore resilience by managing a faulty actor
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > faulty-guest >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="fault-tolerance-2" class="content" data-markdown><script type="text/template">
+## Fault Tolerance
+
+``` java
+@Override
+public SupervisorStrategy supervisorStrategy() {
+  return new OneForOneStrategy(false, DeciderBuilder.
+    match(SomeException.class, e -> SupervisorStrategy.stop())
+    ...
+    .build())
+}
+```
+
+- As you can see, a faulty actor doesn&#39;t bring down the whole system
+- This fault tolerance is implemented through **parental supervision**:
+  - If an actor fails, its message processing is suspended,
+  - its children are suspended recursively – i.e. all descendants – and
+  - its parent has to handle the failure
+- Each actor has a supervisor strategy for handling failure of child actors
+  - As you can see there is a default supervisor strategy in place
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="supervisor-strategies" class="content" data-markdown><script type="text/template">
+## Supervisor Strategies
+
+- Akka ships with two highly configurable supervisor strategies:
+  - *OneForOneStrategy*: Only the faulty child is affected when it fails
+  - *AllForOneStrategy*: All children are affected when one child fails
+- Both are configured with a *DeciderBuilder*:
+  - *Decider = PartialFunction&lt;Throwable, Directive&gt;*
+  - A decider maps specific failure to one of the possible directives
+  - If not defined for some failure, the supervisor itself is considered faulty
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="supervisor-strategy-directives" class="content" data-markdown><script type="text/template">
+## Supervisor Strategy Directives
+
+- *Resume*: Simply resume message processing
+- *Restart*:
+  - Transparently replace affected actor(s) with new instance(s)
+  - Then resume message processing
+- *Stop*: Stop affected actor(s)
+- *Escalate*: Delegate the decision to the supervisor&#39;s parent
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="restarting-vs-resuming" class="content" data-markdown><script type="text/template">
+## Restarting vs. Resuming
+
+- Like stopping, restarting and resuming are recursive operations
+- In both cases, no messages get lost, except for the "faulty" message, if any
+- Resuming simply resumes message processing for the faulty actor and its descendants:
+    - The actor state remains unchanged
+    - Use *Resume* if the state is still considered valid
+- Restarting transparently replaces the affected actor(s) with new instance(s):
+    - Actor state and behavior get reinitialized
+    - Use *Restart* if the state is considered corrupted because of the failure
+    - By default all children get stopped (see the *preRestart* lifecycle hook)
+    - Any children that don&#39;t get stopped get restarted
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+<section id="fine-tuning-restarting-2" class="content" data-markdown><script type="text/template">
+## Fine-tuning Restarting
+
+``` java
+@Override
+public SupervisorStrategy supervisorStrategy() {
+  return new OneForOneStrategy(maxNrOfRetries, withinTimeRange,
+    DeciderBuilder.
+     match(SomeException.class, e -> SupervisorStrategy.stop())
+    ...
+    .build())
+}
+```
+
+- Restarting is tried up to *maxNrOfRetries* times within consecutive time windows defined by *withinTimeRange*
+- If a window has passed without reaching the retry limit, retry counting begins again for the next window
+- By default *withinTimeRange* is *Duration.Inf*, i.e. there is only one window
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="default-supervisor-strategy" class="content" data-markdown><script type="text/template">
+## Default Supervisor Strategy
+
+- If you don&#39;t override *supervisorStrategy*, a *OneForOneStrategy* with the following decider is used by default:
+  - *ActorInitializationException* &#8594; Stop
+  - *ActorKilledException* &#8594; Stop
+  - *DeathPactException*s &#8594; Stop
+  - Other *Exception*s &#8594; Restart
+  - Other *Throwable*s &#8594; Escalates to it&#39;s parent
+- Therefore, in many cases, your actor will be restarted by default
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-custom-supervision" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 12 > Custom Supervision 公案
+
+- In this exercise, we will further explore resilience by implementing custom supervision
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > custom-supervision >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="actor-lifecycle-revisited" class="content" data-markdown><script type="text/template">
+## Actor Lifecycle revisited
+
+![Actor lifecycle](images/actor-lifecycle-03.png "Actor lifecycle")
+
+- The full lifecycle contains the additional states *faulty* and *restarting*
+- You can override the *preRestart* and *postRestart* hooks, which are called whenever an actor is restarted by its supervisor
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="restart-hooks" class="content" data-markdown><script type="text/template">
+## Restart Hooks
+
+``` java
+@Override
+public void preRestart(Throwable t, Option<Object> message)
+  throws Exception {
+  ...
+}
+
+@Override
+public void postRestart(Throwable t)
+ throws Exception {
+ ...
+}
+```
+
+- Quiz: Why is the *message* parameter of *preRestart* optional?
+- By default *preRestart* stops any children, then calls *postStop*
+- By default *postRestart* calls *preStart*
+- Quiz: On which actor instances are these hooks called?
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="self-healing" class="content" data-markdown><script type="text/template">
+## Self Healing
+
+- Failure could easily stop a system from working properly, e.g. because messages or actor state get lost
+- Therefore it is essential to build a **self healing** system:
+  - If the supervisor has enough information, it can reconstruct all state and resend all messages
+  - If not, we need other ways to heal (not covered here)
+- Let&#39;s take a look at an example ...
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-faulty-waiter" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 13 > Faulty Waiter 公案
+
+- In this exercise, we will introduce another faulty actor. Sometimes our *Barista* makes the wrong coffee. When this happens, the *Guest* will complain and reorder. If the *Waiter* receives too many complaints, he will become frustrated
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > faulty-waiter >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-self-healing" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 14 > Self Healing 公案
+
+- In this exercise, we correct a problem introduced in the last exercise by implementing self-healing
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > self-healing >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+</section> <!-- trainivator-hide -->
+
+
+<!-- ########################################################################################### -->
+<!-- Routers and Dispatchers
+<!-- ########################################################################################### -->
+
+
+<section> <!-- trainivator-hide -->
+
+
+<section id="routers-and-dispatchers" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Routers and Dispatchers
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-detect-bottleneck" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 015 > Detect Bottleneck
+
+- In this exercise, we will change our configuration settings to see if we can detect a bottleneck
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > detect-bottleneck >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="message-processing-revisited" class="content" data-markdown><script type="text/template">
+## Message Processing revisited
+
+![Actor](images/actor-03.png "Actor")
+
+- An actor processes (at most) one message at a time
+- If you want to scale up, you have to use multiple actors in parallel
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="concurrency-vs-parallelism-1" class="content" data-markdown><script type="text/template">
+## Digression: Concurrency and Parallelism I
+
+- Definition: Two or more tasks are concurrent, if the order in which they get executed in time is not predetermined
+  - In other words, concurrency introduces non-determinism
+  - Concurrent tasks may or may not get executed in parallel
+  - Hence concurrency is a more general concept than parallelism
+- Concurrent programming is primarily concerned with the complexity that arises due to non-deterministic control flow
+- Parallel programming aims at improving throughput and making control flow deterministic
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="concurrency-vs-parallelism-2" class="content" data-markdown><script type="text/template">
+## Digression: Concurrency and Parallelism II
+
+![Concurrency vs. parallelism](images/con_and_par.jpg "Concurrency vs. parallelism")
+
+- Concurrency is a property of the program
+- Parallel execution is a property of the machine
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="routers" class="content" data-markdown><script type="text/template">
+## Routers
+
+- A router routes messages to destination actors called routees
+- Depending on your needs, different routing strategies can be applied
+- Routers can be used standalone or as self contained router actors
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="routing-strategies" class="content" data-markdown><script type="text/template">
+## Routing Strategies provided by Akka
+
+- *RandomRoutingLogic*
+- *RoundRobinRoutingLogic*
+- *SmallestMailboxRoutingLogic*
+- *ConsistentHashingRoutingLogic*
+- *BroadcastRoutingLogic*
+- *ScatterGatherFirstCompletedRoutingLogic*
+- *TailChoppingRoutingLogic*
+- To write your own routing strategy, extend *RoutingLogic*:
+  - **Attention**: The implementation must be thread-safe!
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="router-actors" class="content" data-markdown><script type="text/template">
+## Router Actors
+
+- Akka provides two flavors of self contained router actors:
+  - Pool router: creates routees as child actors
+  - Group router: routees are provided via actor path
+- Message delivery is optimized:
+  - Messages don&#39;t get enqueued in the mailbox of the router actor
+  - Instead, messages are delivered to a routee directly
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="specially-handled-messages" class="content" data-markdown><script type="text/template">
+## Specially handled Messages
+
+- Every message sent to a router is delivered to one of its routees
+- Yet the following messages are handled in a special way:
+  - *PoisonPill* is not delivered to any routee
+  - *Kill* is not delivered to any routee
+  - The payload of *Broadcast* is delivered to all routees
+- Quiz:
+  - What happens to the routees if you send the *PoisonPill* to a router?
+  - How can you stop all routees gracefully, i.e. handling already received messages before stopping?
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="creating-router-actor" class="content" data-markdown><script type="text/template">
+## Creating a Router Actor
+
+``` java
+ActorRef router =
+  context().actorOf(
+    new RoundRobinPool(5).props(Props.create(Worker.class)),
+    "router2");
+)
+
+context().actorOf(FromConfig.getInstance().props(routeeProps),
+  "router3");
+```
+
+- Router actors must be created programmatically
+- Either use with a *RouterConfig*:
+  - *FromConfig* completely relies on external configuration
+  - Other *RouterConfig*s use a mix of programmatic and external configuration
+- Or use the *props* method of a *Pool* or *Group* configuration
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="router-configuration" class="content" data-markdown><script type="text/template">
+## Important Router Configuration
+
+- Settings can be defined in configuration or programmatically:
+  - If both are given, configuration wins
+- A pool router creates *nrOfInstances* child actors as routees:
+  - An optional *resizer* can dynamically adjust the number of routees
+  - The default *supervisorStrategy* escalates all failure
+- A group router uses existing *routees*
+- Quiz: What happens when a routee of a pool or a group router fails?
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="router-configuration-example" class="content" data-markdown><script type="text/template">
+## Router Configuration Example
+
+``` json
+akka {
+  actor {
+    deployment {
+      /top-level/child-a {
+        router = smallest-mailbox-pool
+        nr-of-instances = 4
+      }
+      /top-level/child-b {
+        router = round-robin-pool
+        resizer {
+          lower-bound = 1
+          upper-bound = 4
+        }
+      ...
+```
+
+<small>For more information see the [Akka documentation](http://doc.akka.io/docs/akka/current/general/configuration.html)</small>
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="ex-implement-router" class="content" data-markdown data-background="#49626d" data-state="h2Uppercase"><script type="text/template">
+## Exercise 16 > Implement Router
+
+- In this exercise, we will introduce parallelism through the use of routers
+    - Make sure your prompt is:
+    ```scala
+    man [e] > coffee-house > implement-router >
+    ```
+    - use the *man e* command to see the instructions.
+</script></section>
+
+<section id="wrapping-up" class="content" data-markdown data-background="#1c3b48" data-state="h2Uppercase"><script type="text/template">
+## Wrapping up
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="feedback" class="content" data-markdown><script type="text/template">
+## Feedback
+
+![Akka Concurrency](images/akka-concurrency.png "Akka Concurrency")
+
+- Thanks for taking this "Fast Track to Akka" training course
+- Would you like to receive a free e-book copy of "Akka Concurrency"?
+- Then complete [this short online survey](http://survey.qualtrics.com/SE/?SID=SV_86oNJRndlpGmSwd) now
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="typesafe-together" class="content" data-markdown><script type="text/template">
+## Lightbend Together
+
+- Developer and production support
+  - Maintenance of older version
+  - Proactive tips and techniques
+- Backstage pass
+  - Ask the expert webinars
+  - Early access to online courses
+- Community spotlight
+  - Posting of job openings on community page
+  - Projects highlighted on Lightbend content sites
+</script></section>
+
+
+<!-- ########################################################################################### -->
+
+
+<section id="end" class="content" data-markdown><script type="text/template">
+## The End
+### Copyright 2016 Lightbend, Inc.
+### All rights reserved.
+
+[![Solutions](images/lightbend-logo.png "Solutions")](fttaj-coffee-house-solutions.zip)
+
+Unless otherwise agreed, training materials may only be used for educational and reference purposes by individual named participants in a training course offered by Lightbend or a Lightbend training partner. Unauthorized reproduction, redistribution, or use of this material is prohibited.
+</script></section>
+
+</section> <!-- trainivator-hide -->
+<!-- trainivator-slide-end -->
+
+
+<!-- ########################################################################################### -->
+<!-- END
+<!-- ########################################################################################### -->
+
+
+</div>
+</div>
+
+<script src="js/slide-validation.js"></script>
+<!-- TODO: Enable i18n.js if translation component has been implemented. -->
+<!-- <script src="js/i18n.js"></script> -->
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+<script src="js/modes.js" type="text/javascript"></script>
+<script>
+
+  // Full list of configuration options available here:
+  // https://github.com/hakimel/reveal.js#configuration
+  Reveal.initialize({
+    controls: true,
+    progress: true,
+    history: true,
+    center: true,
+    maxScale: 2.0,
+
+    transition: 'none', // default/cube/page/concave/zoom/linear/fade/none
+
+    multiplex: {
+      // Example values. To generate your own, see the socket.io server instructions.
+      secret: Modes.getSecretKey, // null so the clients do not have control of the master presentation
+      id: 'c39e601aa073d852', // id, obtained from socket.io server
+      url: 'revealjs.jit.su:443' // Location of your socket.io server
+    },
+
+    // Optional libraries used to extend on reveal.js
+    dependencies: [
+      { src: '//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js', async: true },
+      { src: '//revealjs.jit.su/socket.io/socket.io.js', async: true }, 
+      { src: Modes.getMasterJs, async: true },
+      { src: Modes.getClientJs, async: true },
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+      { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+    ]
+  });
+
+  Reveal.configure({
+      slideNumber: 'c / t'
+    });
+</script>
+
+</body>
+</html>
