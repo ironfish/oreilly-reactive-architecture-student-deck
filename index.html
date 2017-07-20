@@ -351,9 +351,9 @@ public class CoffeeHouse extends AbstractLoggingActor{
     public CoffeeHouse() {
         log().debug("{} has opened!", "Coffee House")
         log().error(exception, "Bar closed!")
-
-        // TODO Define behavior
     }
+
+    // TODO Define behavior
 }
 ```
 
@@ -386,7 +386,7 @@ public class CoffeeHouse extends AbstractLoggingActor{
 - Behavior is simply a *PartialFunction&lt;Object, BoxedUnit&gt;*:
   - An actor can but need not handle any message
 - receiveBuilder() is used for building the partial function.
-- The *receive* method takes in the actor&#39;s initial behavior:
+- The *createReceive* method takes in the actor&#39;s initial behavior:
   - The behavior can be changed at runtime (more to come later)
 </script></section>
 
@@ -399,9 +399,8 @@ public class CoffeeHouse extends AbstractLoggingActor{
 
 ``` java
 receiveBuilder()
-    .match(CreateGuest.class, createGuest -> 
-        createGuest(createGuest.favoriteCoffee))
-    .matchAny(this::unhandled).build();
+    .match(CreateGuest.class, createGuest ->
+        createGuest(createGuest.favoriteCoffee)).build();
 ```
 
 - What happens if a message isn&#39;t handled by the behavior?
@@ -580,7 +579,7 @@ Note:
 ``` java
 ActorRef coffeeHouse = ...
 ...
-this.coffeeHouse.tell("Nice Coffee!", self());
+this.coffeeHouse.tell("Nice Coffee!", getSelf());
 ```
 
 - To send a message to an actor, you need an actor reference
@@ -667,17 +666,16 @@ public class Waiter extends AbstractLoggingActor{
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-            .match(ServeCoffee.class, serveCoffee -> sender()
-                .tell(new CoffeeServed(serveCoffee.coffee), 
-                    self()))
-            .matchAny(this::unhandled).build();
+            .match(ServeCoffee.class, serveCoffee -> getSender()
+                .tell(new CoffeeServed(serveCoffee.coffee),
+                    getSelf())).build();
     }
 ...
 ````
 
-- *sender* gives you access to the sender of the current message
+- *getSender* gives you access to the sender of the current message
 - Quiz: Why might the sender be *ActorSystem.deadLetters*?
-- **Attention**: *sender* is a method, don&#39;t let it leak!
+- **Attention**: *getSender* is a method, don&#39;t let it leak!
 </script></section>
 
 
@@ -755,7 +753,7 @@ public class CoffeeHouse extends AbstractLoggingActor{
   protected ActorRef createGuest(Coffee favoriteCoffee,
     int caffeineLimit){
 
-    return context().actorOf(
+    return getContext().actorOf(
       Guest.props(waiter, favoriteCoffee,
         guestFinishCoffeeDuration, caffeineLimit));
   }
@@ -791,9 +789,9 @@ public class CoffeeHouse extends AbstractLoggingActor{
 ## Looking up Actors
 
 ``` java
-context().actorSelection("/user/coffee-house");
-context().actorSelection("../sibling");
-context().actorSelection("/user/coffee-house/*");
+getContext().actorSelection("/user/coffee-house");
+getContext().actorSelection("../sibling");
+getContext().actorSelection("/user/coffee-house/*");
 ```
 
 - To look up actors use the *actorSelection* method of an *ActorRefFactory*
@@ -814,8 +812,8 @@ context().actorSelection("/user/coffee-house/*");
 ## Identifying Actors
 
 ``` java
-ActorSelection sibling = context().actorSelection("../sibling");
-sibling.tell(Identify(1), self());
+ActorSelection sibling = getContext().actorSelection("../sibling");
+sibling.tell(Identify(1), getSelf());
 ```
 
 - To obtain an actor reference send *Identify* to an *ActorSelection*
@@ -905,10 +903,10 @@ import akka.actor.AbstractLoggingActor;
 import scala.concurrent.duration.FiniteDuration;
 
 private void scheduleCoffeeFinished(){
-  context().system()
+  getContext().system()
   .scheduler()
-  .scheduleOnce(finishCoffeeDuration, self(),
-      CoffeeFinished.Instance, context().dispatcher(), self());
+  .scheduleOnce(finishCoffeeDuration, getSelf(),
+      CoffeeFinished.Instance, getContext().dispatcher(), getSelf());
 }
 ```
 
@@ -1129,8 +1127,8 @@ public void testIt() {
 ## Stopping Actors with the API
 
 ``` java
-context().stop(self);
-context().stop(other);
+getContext().stop(getSelf());
+getContext().stop(other);
 ```
 
 - Both *ActorSystem* and *ActorContext* provide a *stop* method
@@ -1176,7 +1174,7 @@ context().stop(other);
 ## Stopping Actors gracefully
 
 ``` java
-other.tell(StopMeGracefully, self());
+other.tell(StopMeGracefully, getSelf());
 ```
 
 - If an actor needs to perform certain tasks before stopping, it
@@ -1201,14 +1199,13 @@ receiveBuilder().
       final ActorRef guest = createGuest(m.favoriteCoffee,
           createGuest.caffeineLimit);
       addGuestToBookkeeper(guest);
-      context().watch(guest);
+      getContext().watch(guest);
   }).
   match(Terminated.class, terminated -> {
       log().info("Thanks, {}, for being our guest!",
           terminated.getActor());
       removeGuestFromBookkeeper(terminated.getActor());
-  }).
-  matchAny(this::unhandled).build();
+  }).build();
 ```
 
 - An actor can monitor another actor&#39;s termination, aka death watch
@@ -1695,12 +1692,12 @@ public void postRestart(Throwable t)
 
 ``` java
 ActorRef router =
-  context().actorOf(
+  getContext().actorOf(
     new RoundRobinPool(5).props(Props.create(Worker.class)),
     "router2");
 )
 
-context().actorOf(FromConfig.getInstance().props(routeeProps),
+getContext().actorOf(FromConfig.getInstance().props(routeeProps),
   "router3");
 ```
 
@@ -1860,7 +1857,7 @@ Unless otherwise agreed, training materials may only be used for educational and
     // Optional libraries used to extend on reveal.js
     dependencies: [
       { src: '//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js', async: true },
-      { src: '//revealjs.jit.su/socket.io/socket.io.js', async: true }, 
+      { src: '//revealjs.jit.su/socket.io/socket.io.js', async: true },
       { src: Modes.getMasterJs, async: true },
       { src: Modes.getClientJs, async: true },
       { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
